@@ -63,6 +63,16 @@ char readDesc[20];
 
 int shmid = shmget(key, SHM_SIZE, IPC_CREAT | 0777);
 
+int * turn;
+int * flag;
+
+
+turn = (int *)shmat(shmid, NULL, 0);
+flag = turn + 1;
+
+*turn = 5;
+flag[1] = 999;
+
 
 while ((option = getopt(argc, argv, "n:h")) != -1){
 	switch (option){
@@ -78,17 +88,22 @@ while ((option = getopt(argc, argv, "n:h")) != -1){
 	}
 }
 
-char * paddr = (char*)(shmat(shmid, 0, 0));
-int * turn = (int *)(paddr);
+//create the producer child
+pid_t producerPid = fork();
 
-*turn = 5;
-
-pid_t childpid = fork();
-
-if (childpid == 0){
-printf("here!\n");
-execv("./consumer", NULL);
+if (producerPid == 0){
+execv("./producer", NULL);
 }
+
+int index;
+
+for (index = 1; index <= numConsumers; index++){
+	pid_t consumerPid = fork();
+	if (consumerPid == 0){
+	execv("./consumer", NULL);
+	}
+}
+wait(NULL);
 
 //printf("%d", turn);
 
