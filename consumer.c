@@ -16,18 +16,21 @@
 
 int main (int argc, char *argv[]){
 
-printf("THERE!");
+int *turn;
+int *flag;
+
+printf("From consumer child\n");
 
 key_t key = 59566;
 
 int shmid = shmget(key, SHM_SIZE, 0777);
 
-int * turn = (int *)(shmat (shmid, 0, 0 ));
+turn = (int *)(shmat (shmid, 0, 0 ));
+flag = turn +1;
 
+printf("%d\n", *turn);
 
-printf("%d", *turn);
-
-//return 1;
+return 1;
 
 }
 
