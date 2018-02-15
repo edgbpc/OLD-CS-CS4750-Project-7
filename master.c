@@ -97,15 +97,27 @@ execv("./producer", NULL);
 
 int index;
 
+
+//create consumer children
 for (index = 1; index <= numConsumers; index++){
 	pid_t consumerPid = fork();
 	if (consumerPid == 0){
 	execv("./consumer", NULL);
 	}
 }
+printf("Waiting for the kids\n");
 wait(NULL);
+printf("Done waiting\n");
 
-//printf("%d", turn);
+
+shmdt(turn);
+shmctl(shmid, IPC_RMID, NULL);
+
+return 0;
+
+}
+
+	//printf("%d", turn);
 
 /* Code is just to check if parent was sending data to child and child could read it
 
@@ -132,8 +144,4 @@ printf("Child(%d): I am a %s\n", getpid(), producerDesc);
 close(fd[0]);
 }
 */
-	return 0;
 
-
-
-}	
