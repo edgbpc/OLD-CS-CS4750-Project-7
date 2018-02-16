@@ -15,7 +15,8 @@
 #include <time.h>
 #include <string.h>
 
-#define SHM_SIZE 1024
+#define SHM_SIZE 1000
+#define BUFFERSIZE 50
 
 /*
 void print_usage(){
@@ -33,6 +34,12 @@ int spawnProcesses(const char * program, char ** arg_list){
 	}
 }
 */
+
+typedef struct {
+	char buffer[BUFFERSIZE];
+	int flag;
+}bufferType;
+
 void handle(int sig){
 	printf("Terminating program");
 	exit(0);
@@ -45,33 +52,73 @@ int main (int argc, char *argv[]){
 alarm(100);
 signal(SIGALRM, handle);
 
-key_t key = 59566;
-char *data;
-int mode;
+key_t keyTurn = 59566;
+
+key_t keyBufferOne = 59567;
+key_t keyBufferTwo = 59568;
+key_t keyBufferThree = 59569;
+key_t keyBufferFour = 59560;
+key_t keyBufferFive = 59561;
 
 int option;
 int numConsumers;
 
-//int fd[2];
-//int producerID = 0;
+//Create buffers
+bufferType bufferOne;
+bufferType *bufferOnePtr;
 
-char producerDesc[20] = "Producer";
-char consumerDesc[20] = "Consumer";
-char readDesc[20];
+bufferType bufferTwo;
+bufferType *bufferTwoPtr;
 
-//int childID = 1;
+bufferType bufferThree;
+bufferType *bufferThreePtr;
 
-int shmid = shmget(key, SHM_SIZE, IPC_CREAT | 0777);
+bufferType bufferFour;
+bufferType *bufferFourPtr;
 
-int * turn;
-int * flag;
+bufferType bufferFive;
+bufferType *bufferFivePtr;
 
 
-turn = (int *)shmat(shmid, NULL, 0);
-flag = turn + 1;
 
+//create shared memory locations
+int shmidTurn = shmget(keyTurn, SHM_SIZE, IPC_CREAT | 0777);
+
+int shmidBufferOne = shmget(keyBufferOne, SHM_SIZE, IPC_CREAT | 0777);
+int shmidBufferTwo = shmget(keyBufferTwo, SHM_SIZE, IPC_CREAT | 0777);
+int shmidBufferThree = shmget(keyBufferThree, SHM_SIZE, IPC_CREAT | 0777);
+int shmidBufferFour = shmget(keyBufferFour, SHM_SIZE, IPC_CREAT | 0777);
+int shmidBufferFive = shmget(keyBufferFive, SHM_SIZE, IPC_CREAT | 0777);
+
+//Attach to shared memory
+int * turn = (int *)shmat(shmidTurn, NULL, 0);
+
+bufferOnePtr = (bufferType *)shmat(shmidBufferOne, NULL, 0);
+bufferTwoPtr = (bufferType *)shmat(shmidBufferTwo, NULL, 0);
+bufferThreePtr = (bufferType *)shmat(shmidBufferThree, NULL, 0);
+bufferFourPtr = (bufferType *)shmat(shmidBufferFour, NULL, 0);
+bufferFivePtr = (bufferType *)shmat(shmidBufferFive, NULL, 0);
+
+
+
+
+sleep(2);
+
+
+//testing 
 *turn = 5;
-flag[1] = 999;
+//flag[1] = 999;
+
+//bufferOnePtr = &bufferOne;
+bufferOnePtr->flag = 9999;
+strcpy(bufferOnePtr->buffer, "Data in the buffer");
+
+
+printf("In Parent - Buffer One Buffer: %s\n", bufferOnePtr->buffer);
+
+//strncpy(buffer1, "Info in the buffer 1", 50);
+//strncpy(buffer2, "Info in the buffer 2", 50);
+
 
 
 while ((option = getopt(argc, argv, "n:h")) != -1){
@@ -92,7 +139,7 @@ while ((option = getopt(argc, argv, "n:h")) != -1){
 pid_t producerPid = fork();
 
 if (producerPid == 0){
-execv("./producer", NULL);
+//execv("./producer", NULL);
 }
 
 int index;
@@ -102,6 +149,12 @@ int index;
 for (index = 1; index <= numConsumers; index++){
 	pid_t consumerPid = fork();
 	if (consumerPid == 0){
+	char consumerID[15] = "consumer0";
+	char indexNum[5];
+	sprintf(indexNum, "%d", index);
+	strcat(consumerID, indexNum);
+	
+	printf("I am consumer process:%s\n", consumerID);
 	execv("./consumer", NULL);
 	}
 }
@@ -110,8 +163,8 @@ wait(NULL);
 printf("Done waiting\n");
 
 
-shmdt(turn);
-shmctl(shmid, IPC_RMID, NULL);
+//shmdt(turn);
+//shmctl(shmid, IPC_RMID, NULL);
 
 return 0;
 
