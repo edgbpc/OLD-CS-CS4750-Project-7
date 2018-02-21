@@ -32,5 +32,5 @@ producer: $(OBJS3)
 
 .PHONY: clean
 clean:
-	/bin/rm -f *.o *~ $(TARGET1) $(TARGET2) $(TARGET3)
+	/bin/rm -f *.log *.o *~ $(TARGET1) $(TARGET2) $(TARGET3)
 
