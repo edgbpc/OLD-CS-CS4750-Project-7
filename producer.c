@@ -37,7 +37,7 @@ FILE *fp;
 
 time_t current_time;
 struct tm * time_info;
-char *timeString;
+char timeString[9];
 
 
 int main (int argc, char *argv[]){
