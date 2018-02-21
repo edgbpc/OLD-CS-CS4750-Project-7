@@ -47,15 +47,20 @@ typedef enum {
 
 void handle(int sig){
 	printf("Terminating program");
-	exit(0);
+	exit(2);
 }
+
+void childTrap(int sig);
+
+pid_t producerPid, consumerPid;
 
 int main (int argc, char *argv[]){
 
 
 //set alarm  timer to 100 seconds.  signal invokes SIGALRM and calls handle to terminate program
-//alarm(100);
-//signal(SIGALRM, handle);
+alarm(100);
+signal(SIGALRM, handle);
+signal(SIGINT, childTrap);
 
 key_t keyTurn = 59566;
 
@@ -69,7 +74,7 @@ key_t keyFlag = 59562;
 key_t keyEOFFlag = 59563; 
 
 int option;
-int numConsumers;
+int numConsumers = 10;
 
 int status = 0;
 
@@ -121,50 +126,92 @@ bufferFivePtr = (bufferType *)shmat(shmidBufferFive, NULL, 0);
 while ((option = getopt(argc, argv, "n:h")) != -1){
 	switch (option){
 		case 'n' : numConsumers = atoi(optarg);
+			   if (numConsumers > 19){
+			   	printf("Max processes is 20\n");
+				printf("Running with 1 Producer, 19 COnsumers\n");
+				numConsumers = 19;
+				}
 			break;
 
 		case 'h' : // print_usage();
 			return (0);
 			break;
 
-	default : //print_usage();
-		exit(EXIT_FAILURE);
+	default : 
+		printf("No number of consumers specified. Default is 10\n");
+		break;	
 	}
 }
 
 printf("No processes forked yet\n");
 
 //create the producer child
-pid_t producerPid = fork();
+producerPid = fork();
+
+
+
+
 
 if (producerPid == 0){
-printf("Producer Process\n");
-execv("./producer", NULL);
+//printf("Producer Process\n");
+char tempArg[5];
+snprintf(tempArg, sizeof(tempArg), "%d", numConsumers);
+
+execlp("./producer", "1", tempArg, NULL);
 }
 
 int index;
 
-
 //create consumer children
 for (index = 1; index <= numConsumers; index++){
+	//printf("in consumer creation loop\n");
 	pid_t consumerPid = fork();
 	if (consumerPid == 0){
-	printf("Consumer Process\n");
-	char arg1[2];
-	snprintf(arg1, sizeof(arg1), "%d", index);
-	execlp("./consumer", arg1, NULL );
+	printf("child created\n");
+	char tempArg1[5];
+	char tempArg2[5];
+	snprintf(tempArg1, sizeof(tempArg1), "%d", index);
+	snprintf(tempArg2, sizeof(tempArg2), "%d", numConsumers);
+	execlp("./consumer", tempArg1, tempArg2, NULL);
+	//printf("consumer executed\n");
 	}
 }
 
 pid_t wpid;
 
 
-printf("Waiting on the kids\n");
+//printf("Waiting on the kids\n");
 
 while((wpid = wait(&status)) > 0);;
-printf("End of master\n");
+//printf("End of master\n");
+
+
+shmdt(turn);
+shmdt(flag);
+shmdt(EOFflag);
+shmdt(bufferOnePtr);
+shmdt(bufferTwoPtr);
+shmdt(bufferThreePtr);
+shmdt(bufferFourPtr);
+shmdt(bufferFivePtr);
+
+
+shmctl(shmidTurn, IPC_RMID, NULL);
+shmctl(shmidFlag, IPC_RMID, NULL);
+shmctl(shmidBufferOne, IPC_RMID, NULL);
+shmctl(shmidBufferTwo, IPC_RMID, NULL);
+shmctl(shmidBufferThree, IPC_RMID, NULL);
+shmctl(shmidBufferFour, IPC_RMID, NULL);
+shmctl(shmidBufferFive, IPC_RMID, NULL);
 
 exit(1);
+}
+
+
+void childTrap(int sig){
+kill(producerPid, SIGINT);
+kill(consumerPid, SIGINT);
+//exit(2);
 }
 
 	//printf("%d", turn);
