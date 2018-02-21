@@ -16,11 +16,17 @@ When I did not have the producer code behind the multiple process code, it did c
 
 When I had the program without the producer having to wait for a turn in the critical section, it did build log files as expected.
 
-it not longer builds log files with the producer gated behind that multiple process code.
+it does build a log file but only contains data for the first pass throug the read and write buffers.
+
+the output on the screen were some of my attempts to trace problems and can largely ne ignored.
 
 I did not attempt to write a shell script.
 
+i did not attempt a master log.
+
 i would ask that you consider allowing students to hand in this assignment again and try to get some of the points back.
+
+I put somewhere between 40-50 hours into the project.  Most of that time researching shared memory and signal handling.  I wish had more to show for that time time spent.
 
 Thank you,
 Eric Goodwin
