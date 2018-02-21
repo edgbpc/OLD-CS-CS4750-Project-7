@@ -1,0 +1,26 @@
+start program:  ex - master -n 5 < alice.txt.
+
+I found this assignment to be much more difficult then my current skills in C and Unix allowed.
+
+
+I am turning in the program as I have it but it does not function.
+
+The program does not run as expected.  I feel that the progam does not allow the producer back into the critical section once the consumers get into it.   As a result, the producer only gets one pass through the buffers.  The system beings to repeat code after the critical section of the consumers without allowing the producer to ever get back in.
+
+alarm and SIGALRM does function to terminate the program after 100s.
+
+ctrl C does terminate the processes but does not return to command prompt forcing user to close the terminal.  This also prevents masters form deallocating memory since producers and consumers need to exit to all master to continue.  
+
+
+When I did not have the producer code behind the multiple process code, it did continually fill buffers and the consumers took turns to read from the buffers and build their log file.  However, as you told me, the producer had to be gated by that multiple process code as well. I was unable to get both producer and consumers to take turns in the critical sections.
+
+When I had the program without the producer having to wait for a turn in the critical section, it did build log files as expected.
+
+it not longer builds log files with the producer gated behind that multiple process code.
+
+I did not attempt to write a shell script.
+
+i would ask that you consider allowing students to hand in this assignment again and try to get some of the points back.
+
+Thank you,
+Eric Goodwin
