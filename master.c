@@ -60,7 +60,7 @@ int main (int argc, char *argv[]){
 //set alarm  timer to 100 seconds.  signal invokes SIGALRM and calls handle to terminate program
 alarm(100);
 signal(SIGALRM, handle);
-signal(SIGINT, childTrap);
+//signal(SIGINT, childTrap);
 
 key_t keyTurn = 59566;
 
@@ -122,6 +122,8 @@ bufferTwoPtr = (bufferType *)shmat(shmidBufferTwo, NULL, 0);
 bufferThreePtr = (bufferType *)shmat(shmidBufferThree, NULL, 0);
 bufferFourPtr = (bufferType *)shmat(shmidBufferFour, NULL, 0);
 bufferFivePtr = (bufferType *)shmat(shmidBufferFive, NULL, 0);
+
+
 
 while ((option = getopt(argc, argv, "n:h")) != -1){
 	switch (option){
@@ -203,6 +205,7 @@ shmctl(shmidBufferTwo, IPC_RMID, NULL);
 shmctl(shmidBufferThree, IPC_RMID, NULL);
 shmctl(shmidBufferFour, IPC_RMID, NULL);
 shmctl(shmidBufferFive, IPC_RMID, NULL);
+shmctl(shmidEOFFlag, IPC_RMID, NULL);
 
 exit(1);
 }
