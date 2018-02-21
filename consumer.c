@@ -27,7 +27,6 @@ typedef struct {
 
 typedef enum { idle, want_in, in_cs} state;
 
-char * printTimeString();
 
 void handle(int sig);
 
@@ -35,7 +34,7 @@ FILE *fp;
 
 	time_t current_time;
 	struct tm * time_info;
-	char * timeString;
+	char timeString[9];
 int main (int argc, char *argv[]){
 
 signal(SIGINT, handle);
@@ -134,6 +133,7 @@ if (bufferOnePtr->flag == full){
 	fprintf(fp, "%s\tRead\t1\t%s\n", timeString, bufferOnePtr->buffer);
 	//strcpy(bufferOnePtr->buffer, "");
 	bufferOnePtr->flag = empty;
+	printf("flag is %d", bufferOnePtr->flag);
  } else
 
 if (bufferTwoPtr->flag == full){
@@ -159,7 +159,7 @@ if (bufferFivePtr->flag == full){
 	fprintf(fp, "%s\tRead\t5\t%s\n", timeString, bufferFivePtr->buffer);
 //	strcpy(bufferFivePtr->buffer, "");
 	bufferFivePtr->flag = empty;
- }// else
+ } 
 
 //eiND CRITICAL SECTION //
 //printf("Out of critical section\n");
@@ -193,16 +193,9 @@ exit(2);
 }
 
 
-char * printTimeString(){
-//	char * timeString = malloc(15);
-
-	return timeString;
-	
-}
 
 
 void handle(int sig){
-	fprintf(fp, "%s\tTermination\tKilled\n", printTimeString());
 	printf("from child - signal received");
 	exit(2);
 }
