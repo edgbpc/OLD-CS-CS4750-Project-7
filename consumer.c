@@ -2,139 +2,102 @@
 //Project 2 - Current Unix processes
 //Class: OS, Evening Section
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <sys/wait.h>
-#include <sys/ipc.h>
-#include <sys/shm.h>
-#include <sys/types.h>
-#include <time.h>
-#include <string.h>
-#include <signal.h>
-
-#define SHM_SIZE 1000
-#define BUFFERSIZE 50
-
-#define empty 0
-#define full 1
-
-typedef struct {
-	char buffer[BUFFERSIZE];
-	int flag;
-}bufferType;
-
-
-typedef enum { idle, want_in, in_cs} state;
-
-
-void handle(int sig);
+#include "oss.h"
 
 FILE *fp;
 
-	time_t current_time;
-	struct tm * time_info;
-	char timeString[9];
+time_t current_time;
+struct tm * time_info;
+char timeString[9];
+
 int main (int argc, char *argv[]){
 
-signal(SIGINT, handle);
-printf("In child process\n");
+	int location = atoi(argv[1]);
 
+	signal(SIGINT, handle);
 
-//buffers and pointers
-bufferType bufferOne, *bufferOnePtr;
-bufferType bufferTwo, *bufferTwoPtr;
-bufferType bufferThree, *bufferThreePtr;
-bufferType bufferFour, *bufferFourPtr;
-bufferType bufferFive, *bufferFivePtr;
+	//shared memory keys
+	turnKey = 59566;
+	bufferKey = 59567;
+	flagKey = 59562;
+	processesKey =  59564;
 
-//shared memory keys
-key_t keyTurn = 59566;
-key_t keyBufferOne = 59567;
-key_t keyBufferTwo = 59568;
-key_t keyBufferThree = 59569;
-key_t keyBufferFour = 59560;
-key_t keyBufferFive = 59561;
-key_t keyFlag = 59562;
-key_t keyEOFFlag = 59563;
+	shmidTurn = shmget(turnKey, SHM_SIZE, 0666);
+	shmidBuffer = shmget(bufferKey, 5*(sizeof(Buffer)), 0666);
+	shmidFlag = shmget(flagKey, SHM_SIZE, 0666);
+	shmidProcesses = shmget(processesKey, 18*(sizeof(Process)), 0666);
 
-int shmidTurn = shmget(keyTurn, SHM_SIZE, 0777);
+//	int shmidEOFFlag = shmget(keyEOFFlag, SHM_SIZE, 0777);
 
-int shmidBufferOne = shmget(keyBufferOne, SHM_SIZE, 0777);
-int shmidBufferTwo = shmget(keyBufferTwo, SHM_SIZE, 0777);
-int shmidBufferThree = shmget(keyBufferThree, SHM_SIZE, 0777);
-int shmidBufferFour = shmget(keyBufferFour, SHM_SIZE, 0777);
-int shmidBufferFive = shmget(keyBufferFive, SHM_SIZE, 0777);
-int shmidFlag = shmget(keyFlag, SHM_SIZE, 0777);
-int shmidEOFFlag = shmget(keyEOFFlag, SHM_SIZE, 0777);
+	int *turn = (int *) (shmat(shmidTurn, 0, 0));
+	state * flag =  (state *) (shmat(shmidFlag, 0, 0));
+//	*EOFFlag = (int *) (shmat(shmidEOFFlag, 0, 0));
 
-int * turn = (int *) (shmat(shmidTurn, 0, 0));
-state * flag = (state *) (shmat(shmidFlag, 0, 0));
-int * EOFFlag = (int *) (shmat(shmidEOFFlag, 0, 0));
-
-bufferOnePtr = (bufferType *)(shmat (shmidBufferOne, 0, 0));
-bufferTwoPtr = (bufferType *)(shmat (shmidBufferTwo, 0, 0));
-bufferThreePtr = (bufferType *)(shmat (shmidBufferThree, 0, 0));
-bufferFourPtr = (bufferType *)(shmat (shmidBufferFour, 0, 0));
-bufferFivePtr = (bufferType *)(shmat (shmidBufferFive, 0, 0));
+	Buffer * bufferTable = (Buffer *)(shmat (shmidBuffer, 0, 0));
+	Process * processes = (Process *)(shmat(shmidProcesses, 0, 0));
 
 //file
-char consumer[12] = "consumer";
-char fileName[20];
-sprintf(fileName, "%s%s.log", consumer, argv[0]);
-fp = fopen(fileName, "w");
+	char consumer[12] = "consumer";
+	char fileName[20];
+	sprintf(fileName, "%s%s.log", consumer, argv[0]);
+	fp = fopen(fileName, "w");
 
-srand(time(NULL));
+	printf("Process %d consumer flag is %d, producer flag is %d\n", getpid(), processes[location].consumer, processes[location].producer );
+
+/*
+	srand(time(NULL));
 
 
 	time(&current_time);
 	time_info = localtime(&current_time);
 	strftime(timeString, sizeof(timeString), "%H:%M:%S", time_info);
 
-fprintf(fp, "%s\tStarted\n", timeString);
-for ( ; ; ){
+	fprintf(fp, "%s\tStarted\n", timeString);
 
-printf("Consumer %s is entering multiple process solution code\n", argv[0]);
-int r;
-r=((rand()%5));
-sleep(r);
+	for ( ; ; ){
+
+		printf("Consumer %s is entering multiple process solution code\n", argv[0]);
+		int r;
+		r=((rand()%5));
+		sleep(r);
 
 
-	//int i = 1;
-	int i = atoi(argv[0])+1;
-	int j;
-	int n = atoi(argv[1])+1;
-	//int n = 2;
+		//int i = 1;
+		int i = atoi(argv[0])+1;
+		int j;
+		int n = atoi(argv[1])+1;
+		//int n = 2;
 
-	printf("int I is : %d\n", i);
-	printf("int n is : %d\n", n);
+		printf("int I is : %d\n", i);
+		printf("int n is : %d\n", n);
 
-	do {
-	    do{
+		do {
+		    do{
 	//	printf("in the neste do loop\n");
-		flag[i] = want_in;
-		j = *turn;
-		while ( j != i )
-		    j =  (flag[j] != idle) ? *turn : (j + 1) % n;
+			flag[i] = want_in;
+			j = *turn;
+			while ( j != i )
+			    j =  (flag[j] != idle) ? *turn : (j + 1) % n;
 		
-		    flag[i] = in_cs;
-		    for ( j = 0; j < n; j++)
-			if (( j != i ) && (flag[j] == in_cs))
-			break;
-	//	printf("bottom of the nested do\n");
-		} while ((j < n) || ( *turn != i && flag[*turn] != idle));
-	//	printf("out of the internal do loop\n");
-		*turn = i;
-//BEGIN CRITICAL SECTION//
+			    flag[i] = in_cs;
 
-printf("before consumer reads\n");
-if (bufferOnePtr->flag == full){
-	printf("Consumer %s is reading from buffer 1\n", argv[0]);
-	fprintf(fp, "%s\tRead\t1\t%s\n", timeString, bufferOnePtr->buffer);
-	//strcpy(bufferOnePtr->buffer, "");
-	bufferOnePtr->flag = empty;
-	printf("flag is %d", bufferOnePtr->flag);
- } else
+			    for ( j = 0; j < n; j++)
+				if (( j != i ) && (flag[j] == in_cs))
+				break;
+	//	printf("bottom of the nested do\n");
+			} while ((j < n) || ( *turn != i && flag[*turn] != idle));
+	//	printf("out of the internal do loop\n");
+			*turn = i;
+//BEGIN CRITICAL SECTION//
+	
+		   printf("before consumer reads\n");
+ 		   if (bufferOnePtr->flag == full){
+ 			   printf("Consumer %s is reading from buffer 1\n", argv[0]);
+			   fprintf(fp, "%s\tRead\t1\t%s\n", timeString, bufferOnePtr->buffer);
+				//strcpy(bufferOnePtr->buffer, "");
+			   bufferOnePtr->flag = empty;
+			   printf("flag is %d", bufferOnePtr->flag);
+		 } else
 
 if (bufferTwoPtr->flag == full){
 	printf("Consumer %s is reading from reading buffer 2\n", argv[0]);
@@ -189,6 +152,7 @@ sleep(r2);
 }while (1);
 
 }
+*/
 exit(2);
 }
 
