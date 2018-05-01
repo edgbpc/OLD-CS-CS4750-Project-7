@@ -4,134 +4,60 @@
 //
 //
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <sys/wait.h>
-#include <sys/time.h>
-#include <sys/ipc.h>
-#include <sys/shm.h>
-#include <sys/types.h>
-#include <time.h>
-#include <string.h>
+#include "oss.h"
 
-#define SHM_SIZE 1000
-#define BUFFERSIZE 50
-
-/*
-void print_usage(){
-printf("stuff");
-}
-
-int spawnProcesses(const char * program, char ** arg_list){
-	pid_t child_pid = fork();
-	if (child_pid != 0) {
-		return child_pid; //[arent process pid
-	} else {
-		execvp (program, arg_list);
-		fprintf (stderr, "An error occured in execvp\n");
-		abort();
-	}
-}
-*/
-
-typedef struct {
-	char buffer[BUFFERSIZE];
-	int flag;
-}bufferType;
-
-typedef enum { 
-	idle, want_in, in_cs
-	} state;
-
-
-void handle(int sig){
-	printf("Terminating program");
-	exit(2);
-}
-
-void childTrap(int sig);
-
-pid_t producerPid, consumerPid;
+pid_t childPid;
+Buffer *bufferTable;
+Process *processes;
 
 int main (int argc, char *argv[]){
 
 
+
 //set alarm  timer to 100 seconds.  signal invokes SIGALRM and calls handle to terminate program
 alarm(100);
-signal(SIGALRM, handle);
+//signal(SIGALRM, handle);
 //signal(SIGINT, childTrap);
 
-key_t keyTurn = 59566;
+turnKey = 59566;
+bufferKey = 59567;
+flagKey = 59562;
+processesKey = 59564;
 
-key_t keyBufferOne = 59567;
-key_t keyBufferTwo = 59568;
-key_t keyBufferThree = 59569;
-key_t keyBufferFour = 59560;
-key_t keyBufferFive = 59561;
-
-key_t keyFlag = 59562;
 key_t keyEOFFlag = 59563; 
 
 int option;
 int numConsumers = 10;
-
-int status = 0;
-
-
-printf("start of program\n");
-
-//Create buffers
-bufferType bufferOne;
-bufferType *bufferOnePtr;
-
-bufferType bufferTwo;
-bufferType *bufferTwoPtr;
-
-bufferType bufferThree;
-bufferType *bufferThreePtr;
-
-bufferType bufferFour;
-bufferType *bufferFourPtr;
-
-bufferType bufferFive;
-bufferType *bufferFivePtr;
-
-
+int index; //for loop counting
 
 //create shared memory locations
-int shmidTurn = shmget(keyTurn, SHM_SIZE, IPC_CREAT | 0777);
-int shmidFlag = shmget(keyFlag, SHM_SIZE, IPC_CREAT | 0777);
-int shmidBufferOne = shmget(keyBufferOne, SHM_SIZE, IPC_CREAT | 0777);
-int shmidBufferTwo = shmget(keyBufferTwo, SHM_SIZE, IPC_CREAT | 0777);
-int shmidBufferThree = shmget(keyBufferThree, SHM_SIZE, IPC_CREAT | 0777);
-int shmidBufferFour = shmget(keyBufferFour, SHM_SIZE, IPC_CREAT | 0777);
-int shmidBufferFive = shmget(keyBufferFive, SHM_SIZE, IPC_CREAT | 0777);
-int shmidEOFFlag = shmget(keyEOFFlag, SHM_SIZE, IPC_CREAT | 0777);
-
+shmidTurn = shmget(turnKey, SHM_SIZE, IPC_CREAT | 0666);
+shmidBuffer = shmget(bufferKey, 5*(sizeof(Buffer)), IPC_CREAT | 0666);
+shmidFlag = shmget(flagKey, SHM_SIZE, IPC_CREAT | 0666);
+shmidProcesses = shmget(processesKey, 18*(sizeof(Process)), IPC_CREAT | 0666);
 
 //Attach to shared memory
 int * turn = (int *)shmat(shmidTurn, NULL, 0);
+bufferTable = (Buffer *)shmat(shmidBuffer, NULL, 0);
 state * flag = (state *)shmat(shmidFlag, NULL, 0);
-int * EOFflag = (int *)shmat(shmidEOFFlag, NULL, 0);
+processes = (Process *)shmat(shmidProcesses, NULL, 0);
 
-*EOFflag = 1;
 
-bufferOnePtr = (bufferType *)shmat(shmidBufferOne, NULL, 0);
-bufferTwoPtr = (bufferType *)shmat(shmidBufferTwo, NULL, 0);
-bufferThreePtr = (bufferType *)shmat(shmidBufferThree, NULL, 0);
-bufferFourPtr = (bufferType *)shmat(shmidBufferFour, NULL, 0);
-bufferFivePtr = (bufferType *)shmat(shmidBufferFive, NULL, 0);
+
+//int * EOFflag = (int *)shmat(shmidEOFFlag, NULL, 0);
+
+//*EOFflag = 1;
+
 
 
 
 while ((option = getopt(argc, argv, "n:h")) != -1){
 	switch (option){
 		case 'n' : numConsumers = atoi(optarg);
-			   if (numConsumers > 19){
+			   if (numConsumers > 17){
 			   	printf("Max processes is 20\n");
-				printf("Running with 1 Producer, 19 COnsumers\n");
-				numConsumers = 19;
+				printf("Running with 1 Producer, 17 Consumers\n");
+				numConsumers = 17;
 				}
 			break;
 
@@ -145,77 +71,68 @@ while ((option = getopt(argc, argv, "n:h")) != -1){
 	}
 }
 
-printf("No processes forked yet\n");
+	printf("No processes forked yet\n");
 
-//create the producer child
-producerPid = fork();
+	//assign process 0 as producer
+	processes[0].producer = true;
+
+	//assign remaining processes as consumer
+	for (index = 0; index < numConsumers; index++){
+		processes[index].consumer = true;
+	}
+
+	//create producer child
+	childPid = fork();
+
+	if (childPid == -1){
+		printf("Failed to fork.  Aborting");
+		exit(0);
+	} else if (childPid == 0){
+		processes[0].pid = childPid;
+		processes[0].index = 0;
+		execl("./producer", NULL);
+	}
 
 
-
-
-
-if (producerPid == 0){
-//printf("Producer Process\n");
-char tempArg[5];
-snprintf(tempArg, sizeof(tempArg), "%d", numConsumers);
-
-execlp("./producer", "1", tempArg, NULL);
-}
-
-int index;
 
 //create consumer children
-for (index = 1; index <= numConsumers; index++){
-	//printf("in consumer creation loop\n");
-	pid_t consumerPid = fork();
-	if (consumerPid == 0){
-	printf("child created\n");
-	char tempArg1[5];
-	char tempArg2[5];
-	snprintf(tempArg1, sizeof(tempArg1), "%d", index);
-	snprintf(tempArg2, sizeof(tempArg2), "%d", numConsumers);
-	execlp("./consumer", tempArg1, tempArg2, NULL);
-	//printf("consumer executed\n");
+	for (index = 1; index <= numConsumers; index++){
+		//printf("in consumer creation loop\n");
+		childPid = fork();
+		if (childPid == -1){
+			printf("failed to fork. Aborting");
+			exit(0);
+		} else if (childPid == 0){
+			char intBuffer[3];
+			sprintf(intBuffer, "%d", index);
+			processes[index].pid = childPid;
+			processes[index].index = index;
+			execl("./consumer", "consumer", intBuffer, NULL);
+		}
 	}
-}
-
-pid_t wpid;
 
 
 //printf("Waiting on the kids\n");
 
-while((wpid = wait(&status)) > 0);;
+wait(NULL);
 //printf("End of master\n");
 
 
 shmdt(turn);
 shmdt(flag);
-shmdt(EOFflag);
-shmdt(bufferOnePtr);
-shmdt(bufferTwoPtr);
-shmdt(bufferThreePtr);
-shmdt(bufferFourPtr);
-shmdt(bufferFivePtr);
+//shmdt(EOFflag);
+shmdt(bufferTable);
 
 
 shmctl(shmidTurn, IPC_RMID, NULL);
 shmctl(shmidFlag, IPC_RMID, NULL);
-shmctl(shmidBufferOne, IPC_RMID, NULL);
-shmctl(shmidBufferTwo, IPC_RMID, NULL);
-shmctl(shmidBufferThree, IPC_RMID, NULL);
-shmctl(shmidBufferFour, IPC_RMID, NULL);
-shmctl(shmidBufferFive, IPC_RMID, NULL);
-shmctl(shmidEOFFlag, IPC_RMID, NULL);
+shmctl(shmidBuffer, IPC_RMID, NULL);
+//shmctl(shmidEOFFlag, IPC_RMID, NULL);
 
 exit(1);
 }
 
 
-void childTrap(int sig){
-kill(producerPid, SIGINT);
-kill(consumerPid, SIGINT);
-//exit(2);
-}
 
 	//printf("%d", turn);
 
