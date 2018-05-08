@@ -1,7 +1,7 @@
 # Makefile with suffix rules
 
 CC	= gcc
-CFLAGS	= -g
+CFLAGS	= -g -lrt
 TARGET1 = master
 TARGET2 = consumer
 TARGET3 = producer
