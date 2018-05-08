@@ -13,8 +13,8 @@ char timeString[9];
 int main (int argc, char *argv[]){
 
 	int location = atoi(argv[1]);
+	int numProcesses = atoi(argv[2]);
 
-	signal(SIGINT, handle);
 
 	//shared memory keys
 	turnKey = 59566;
@@ -24,7 +24,7 @@ int main (int argc, char *argv[]){
 
 	shmidTurn = shmget(turnKey, SHM_SIZE, 0666);
 	shmidBuffer = shmget(bufferKey, 5*(sizeof(Buffer)), 0666);
-	shmidFlag = shmget(flagKey, SHM_SIZE, 0666);
+	shmidFlag = shmget(flagKey, 18*SHM_SIZE, 0666);
 	shmidProcesses = shmget(processesKey, 18*(sizeof(Process)), 0666);
 
 //	int shmidEOFFlag = shmget(keyEOFFlag, SHM_SIZE, 0777);
@@ -39,57 +39,104 @@ int main (int argc, char *argv[]){
 //file
 	char consumer[12] = "consumer";
 	char fileName[20];
-	sprintf(fileName, "%s%s.log", consumer, argv[0]);
+	sprintf(fileName, "%s%s.log", consumer, argv[1]);
 	fp = fopen(fileName, "w");
 
-	printf("Process %d consumer flag is %d, producer flag is %d\n", getpid(), processes[location].consumer, processes[location].producer );
-
-/*
-	srand(time(NULL));
+	printf("Process %d consumer flag is %d, producer flag is %d\n", processes[location].pid, processes[location].consumer, processes[location].producer );
 
 
+	time_t timeSeed;
+	srand((int)time(&timeSeed) % getpid()); //%getpid used because children were all getting the same "random" time to run. 
+
+
+
+			calculateTime();
+	fprintf(fp, "%s\tStarted\n", timeString);
+
+	int i = location;
+	int j;
+	int n = numProcesses;
+
+
+
+	do { 
+		do{
+			flag[i] = want_in;
+			j = *turn;
+			while (j != i)
+				j = (flag[j] != idle ) ? *turn : (j + 1 ) % n;
+
+			flag[i] = in_cs;
+
+			for (j = 0; j < n; j++)
+				if ((j != i) && (flag[j] == in_cs))
+					break;
+		} while ((j < n ) || ( *turn != i && flag[*turn] != idle));
+		
+		*turn = i;
+		//critical section
+		if (bufferTable[0].isFull == true){
+			calculateTime();
+			printf("Consumer %d is reading from buffer 0\n", location);
+			fprintf(fp, "%s\tRead\t0\t%s\n", timeString, bufferTable[0].data);
+			fflush(fp);
+			bufferTable[0].isFull = false;
+		} else if (bufferTable[1].isFull == true){
+			calculateTime();
+			printf("Consumer %d is reading from buffer 1\n", location);
+			fprintf(fp, "%s\tRead\t1\t%s\n", timeString, bufferTable[1].data);
+			fflush(fp);
+			bufferTable[1].isFull = false;
+
+		} else if (bufferTable[2].isFull == true){
+			printf("Consumer %d is reading from buffer 2\n", location);
+			calculateTime();
+			fprintf(fp, "%s\tRead\t2\t%s\n", timeString, bufferTable[2].data);
+			fflush(fp);
+			bufferTable[2].isFull = false;
+
+		} else if (bufferTable[3].isFull == true){
+			printf("Consumer %d is reading from buffer 3\n", location);
+			calculateTime();
+			fprintf(fp, "%s\tRead\t3\t%s\n", timeString, bufferTable[3].data);
+			fflush(fp);
+			bufferTable[3].isFull = false;
+		
+		} else if (bufferTable[4].isFull == true) {
+			calculateTime();
+			printf("Consumer %d is reading from buffer 4\n", location);
+			fprintf(fp, "%s\tRead\t4\t%s\n", timeString, bufferTable[4].data);
+			fflush(fp);
+			bufferTable[4].isFull = false;
+
+		}
+
+
+		//Exit section
+
+		j = (*turn + 1) % n;
+		while (flag[j] == idle)
+			j = (j + 1) % n;
+
+		//assign turn to next waiting process; change own flag to idle
+		*turn = j; flag[i] = idle;
+
+		//remainder_Section()
+		
+		int randSleep = rand() % 5 + 1;
+		printf("Process %d is sleeping for %d\n", getpid(), randSleep);
+		sleep(randSleep);
+
+		} while (1);	
+	}	
+	
+void calculateTime(){
 	time(&current_time);
 	time_info = localtime(&current_time);
 	strftime(timeString, sizeof(timeString), "%H:%M:%S", time_info);
-
-	fprintf(fp, "%s\tStarted\n", timeString);
-
-	for ( ; ; ){
-
-		printf("Consumer %s is entering multiple process solution code\n", argv[0]);
-		int r;
-		r=((rand()%5));
-		sleep(r);
-
-
-		//int i = 1;
-		int i = atoi(argv[0])+1;
-		int j;
-		int n = atoi(argv[1])+1;
-		//int n = 2;
-
-		printf("int I is : %d\n", i);
-		printf("int n is : %d\n", n);
-
-		do {
-		    do{
-	//	printf("in the neste do loop\n");
-			flag[i] = want_in;
-			j = *turn;
-			while ( j != i )
-			    j =  (flag[j] != idle) ? *turn : (j + 1) % n;
-		
-			    flag[i] = in_cs;
-
-			    for ( j = 0; j < n; j++)
-				if (( j != i ) && (flag[j] == in_cs))
-				break;
-	//	printf("bottom of the nested do\n");
-			} while ((j < n) || ( *turn != i && flag[*turn] != idle));
-	//	printf("out of the internal do loop\n");
-			*turn = i;
+}
 //BEGIN CRITICAL SECTION//
-	
+/*	
 		   printf("before consumer reads\n");
  		   if (bufferOnePtr->flag == full){
  			   printf("Consumer %s is reading from buffer 1\n", argv[0]);
@@ -136,30 +183,8 @@ if (bufferFivePtr->flag == full){
 //printf("From Child - End of file reached");
 //exit(2);
 //break;
-
-j = (*turn + 1) % n;
-while (flag[j] == idle)
-	j = (j + 1) % n;
-*turn = j; 
-flag[i]=idle;
-
-printf("after exit code in Child");
-
-
-int r2=((rand()%5)+1);
-sleep(r2);
-//printf("end of while loop");
-}while (1);
-
-}
 */
-exit(2);
-}
 
 
 
 
-void handle(int sig){
-	printf("from child - signal received");
-	exit(2);
-}

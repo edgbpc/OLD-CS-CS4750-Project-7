@@ -10,12 +10,31 @@ pid_t childPid;
 Buffer *bufferTable;
 Process *processes;
 
+int * turn;
+state * flag;
+
 int main (int argc, char *argv[]){
 
+	double terminateTime = 100; //used by setperiodic to terminate program
+	int option;
+	int numConsumers = 10;
+	int index; //for loop counting
+	int status;
+	pid_t wpid;
 
+//signal handler to catch ctrl c
+	if(signal(SIGINT, handle) == SIG_ERR){
+		perror("Signal Failed");
+	}
+	if(signal(SIGALRM, handle) == SIG_ERR){
+		perror("Signal Failed");
+	}	
+//set timer. from book
+	if (setperiodic(terminateTime) == -1){
+		perror("oss: failed to set run timer");
+		return 1;
+	}
 
-//set alarm  timer to 100 seconds.  signal invokes SIGALRM and calls handle to terminate program
-alarm(100);
 //signal(SIGALRM, handle);
 //signal(SIGINT, childTrap);
 
@@ -26,20 +45,17 @@ processesKey = 59564;
 
 key_t keyEOFFlag = 59563; 
 
-int option;
-int numConsumers = 10;
-int index; //for loop counting
 
 //create shared memory locations
 shmidTurn = shmget(turnKey, SHM_SIZE, IPC_CREAT | 0666);
 shmidBuffer = shmget(bufferKey, 5*(sizeof(Buffer)), IPC_CREAT | 0666);
-shmidFlag = shmget(flagKey, SHM_SIZE, IPC_CREAT | 0666);
+shmidFlag = shmget(flagKey, 18*SHM_SIZE, IPC_CREAT | 0666);
 shmidProcesses = shmget(processesKey, 18*(sizeof(Process)), IPC_CREAT | 0666);
 
 //Attach to shared memory
-int * turn = (int *)shmat(shmidTurn, NULL, 0);
+turn = (int *)shmat(shmidTurn, NULL, 0);
 bufferTable = (Buffer *)shmat(shmidBuffer, NULL, 0);
-state * flag = (state *)shmat(shmidFlag, NULL, 0);
+flag = (state *)shmat(shmidFlag, NULL, 0);
 processes = (Process *)shmat(shmidProcesses, NULL, 0);
 
 
@@ -73,13 +89,6 @@ while ((option = getopt(argc, argv, "n:h")) != -1){
 
 	printf("No processes forked yet\n");
 
-	//assign process 0 as producer
-	processes[0].producer = true;
-
-	//assign remaining processes as consumer
-	for (index = 0; index < numConsumers; index++){
-		processes[index].consumer = true;
-	}
 
 	//create producer child
 	childPid = fork();
@@ -88,10 +97,11 @@ while ((option = getopt(argc, argv, "n:h")) != -1){
 		printf("Failed to fork.  Aborting");
 		exit(0);
 	} else if (childPid == 0){
-		processes[0].pid = childPid;
 		processes[0].index = 0;
-		execl("./producer", NULL);
-	}
+		char intBuffer1[3];
+		sprintf(intBuffer1, "%d", numConsumers + 1);
+		execl("./producer", "producer", intBuffer1, NULL);
+	}	
 
 
 
@@ -103,62 +113,60 @@ while ((option = getopt(argc, argv, "n:h")) != -1){
 			printf("failed to fork. Aborting");
 			exit(0);
 		} else if (childPid == 0){
-			char intBuffer[3];
-			sprintf(intBuffer, "%d", index);
-			processes[index].pid = childPid;
+			char intBuffer2[3];
+			char intBuffer3[3];
+			sprintf(intBuffer2, "%d", index);
+			sprintf(intBuffer3, "%d", numConsumers + 1);
 			processes[index].index = index;
-			execl("./consumer", "consumer", intBuffer, NULL);
-		}
-	}
-
+			execl("./consumer", "consumer", intBuffer2, intBuffer3, NULL);
+		 } 
+	} 
 
 //printf("Waiting on the kids\n");
 
-wait(NULL);
 //printf("End of master\n");
+//
+
+while ((wpid = wait(&status)) > 0);
 
 
-shmdt(turn);
-shmdt(flag);
-//shmdt(EOFflag);
-shmdt(bufferTable);
+return 1;
+}
 
-
-shmctl(shmidTurn, IPC_RMID, NULL);
-shmctl(shmidFlag, IPC_RMID, NULL);
-shmctl(shmidBuffer, IPC_RMID, NULL);
-//shmctl(shmidEOFFlag, IPC_RMID, NULL);
-
-exit(1);
+//TAKEN FROM BOOK
+static int setperiodic(double sec) {
+   timer_t timerid;
+   struct itimerspec value;
+   if (timer_create(CLOCK_REALTIME, NULL, &timerid) == -1)
+      return -1;
+   value.it_interval.tv_sec = (long)sec;
+   value.it_interval.tv_nsec = (sec - value.it_interval.tv_sec)*BILLION;
+   if (value.it_interval.tv_nsec >= BILLION) {
+      value.it_interval.tv_sec++;
+      value.it_interval.tv_nsec -= BILLION;
+   }
+   value.it_value = value.it_interval;
+   return timer_settime(timerid, 0, &value, NULL);
+}
+void handle(int signo){
+	if (signo == SIGINT || signo == SIGALRM){
+		printf("*********Signal was received************\n");
+		terminateSharedResources();
+		kill(0, SIGKILL);
+		wait(NULL);
+		exit(0);
+	}
 }
 
 
-
-	//printf("%d", turn);
-
-/* Code is just to check if parent was sending data to child and child could read it
-
-pipe(fd);
-
-if (fork() !=0) {
-
-close (fd[0]);
-
-write(fd[1], producerDesc, strlen(producerDesc)+1);
-write(fd[1], &numConsumers, sizeof(childID));
-printf("Parent(%d): There are  %d number of consumers\n", getpid(), numConsumers);
-printf("Parent(%d): Child's description is %s\n", getpid(), producerDesc);
-close(fd[1]);
-
-} else {
-
-close(fd[1]);
-
-read(fd[0], &childID, sizeof(childID));
-read(fd[0], producerDesc, strlen(producerDesc)+1);
-printf("Child(%d): There are %d number of consumers\n", getpid(), numConsumers);
-printf("Child(%d): I am a %s\n", getpid(), producerDesc);
-close(fd[0]);
+void terminateSharedResources(){
+	shmdt(turn);
+	shmdt(flag);
+	//shmdt(EOFflag);
+	shmdt(bufferTable);
+	shmdt(processes);
+	shmctl(shmidTurn, IPC_RMID, NULL);
+	shmctl(shmidFlag, IPC_RMID, NULL);
+	shmctl(shmidBuffer, IPC_RMID, NULL);
+	shmctl(shmidProcesses, IPC_RMID, NULL);
 }
-*/
-
