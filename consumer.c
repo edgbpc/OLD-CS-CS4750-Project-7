@@ -5,6 +5,7 @@
 #include "oss.h"
 
 FILE *fp;
+FILE *fpMasterLog;
 
 time_t current_time;
 struct tm * time_info;
@@ -50,7 +51,7 @@ int main (int argc, char *argv[]){
 
 
 
-			calculateTime();
+	calculateTime();
 	fprintf(fp, "%s\tStarted\n", timeString);
 
 	int i = location;
@@ -75,15 +76,22 @@ int main (int argc, char *argv[]){
 		
 		*turn = i;
 		//critical section
+		
+		fpMasterLog = fopen("master.log", "a");
+		
 		if (bufferTable[0].isFull == true){
 			calculateTime();
 			printf("Consumer %d is reading from buffer 0\n", location);
+			fprintf(fpMasterLog, "PID: %d\tIndex %d '%s'\t Read buffer 0\n", getpid(), location, bufferTable[0].data);
+			fflush(fpMasterLog);
 			fprintf(fp, "%s\tRead\t0\t%s\n", timeString, bufferTable[0].data);
 			fflush(fp);
 			bufferTable[0].isFull = false;
 		} else if (bufferTable[1].isFull == true){
 			calculateTime();
 			printf("Consumer %d is reading from buffer 1\n", location);
+			fprintf(fpMasterLog, "PID: %d\tIndex: %d '%s'\t Read buffer 1\n", getpid(), location, bufferTable[1].data);
+			fflush(fpMasterLog);
 			fprintf(fp, "%s\tRead\t1\t%s\n", timeString, bufferTable[1].data);
 			fflush(fp);
 			bufferTable[1].isFull = false;
@@ -91,6 +99,8 @@ int main (int argc, char *argv[]){
 		} else if (bufferTable[2].isFull == true){
 			printf("Consumer %d is reading from buffer 2\n", location);
 			calculateTime();
+			fprintf(fpMasterLog, "PID:%d\tIndex:%d '%s'\t Read buffer 2\n", getpid(), location, bufferTable[2].data);
+			fflush(fpMasterLog);
 			fprintf(fp, "%s\tRead\t2\t%s\n", timeString, bufferTable[2].data);
 			fflush(fp);
 			bufferTable[2].isFull = false;
@@ -98,6 +108,8 @@ int main (int argc, char *argv[]){
 		} else if (bufferTable[3].isFull == true){
 			printf("Consumer %d is reading from buffer 3\n", location);
 			calculateTime();
+			fprintf(fpMasterLog, "PID: %d\tIndex:%d '%s'\t Read buffer 3\n", getpid(), location, bufferTable[3].data);
+			fflush(fpMasterLog);
 			fprintf(fp, "%s\tRead\t3\t%s\n", timeString, bufferTable[3].data);
 			fflush(fp);
 			bufferTable[3].isFull = false;
@@ -105,6 +117,8 @@ int main (int argc, char *argv[]){
 		} else if (bufferTable[4].isFull == true) {
 			calculateTime();
 			printf("Consumer %d is reading from buffer 4\n", location);
+			fprintf(fpMasterLog, "PID: %d\tIndex: %d '%s'\t Read buffer 4\n", getpid(), location, bufferTable[4].data);
+			fflush(fpMasterLog);
 			fprintf(fp, "%s\tRead\t4\t%s\n", timeString, bufferTable[4].data);
 			fflush(fp);
 			bufferTable[4].isFull = false;
@@ -113,7 +127,7 @@ int main (int argc, char *argv[]){
 
 
 		//Exit section
-
+		fclose(fpMasterLog);
 		j = (*turn + 1) % n;
 		while (flag[j] == idle)
 			j = (j + 1) % n;

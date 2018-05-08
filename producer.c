@@ -7,6 +7,7 @@
 char * printTimeString();
 
 FILE *fp;
+FILE *fpMasterLog;
 
 time_t current_time;
 struct tm * time_info;
@@ -84,6 +85,7 @@ int main (int argc, char *argv[]){
 		*turn = i;
 		//critical section
 		//
+		fpMasterLog = fopen("master.log", "a");
 		while (fgets(str, BUFFERSIZE, stdin) != NULL){
 
 			if (bufferTable[0].isFull == false){
@@ -91,6 +93,8 @@ int main (int argc, char *argv[]){
 				strcpy(bufferTable[0].data, str);
 				bufferTable[0].isFull = true;
 				printf("Wrote to buffer 0\n");
+				fprintf(fpMasterLog, "PID: %d\tIndex: %d\t'%s'\t Write buffer 0\n", getpid(), 0, bufferTable[0].data);
+				fflush(fpMasterLog);
 				fprintf(fp, "%s\tWrite\t0\t%s\n", timeString, bufferTable[0].data);
 				fflush(fp);
 				continue;
@@ -100,6 +104,8 @@ int main (int argc, char *argv[]){
 				strcpy(bufferTable[1].data, str);
 				bufferTable[1].isFull = true;
 				printf("Wrote to buffer 1\n");
+				fprintf(fpMasterLog, "PID: %d\tIndex: %d\t'%s'\t Write buffer 1\n", getpid(), 0, bufferTable[1].data);
+				fflush(fpMasterLog);
 				fprintf(fp, "%s\tWrite\t1\t%s\n", timeString, bufferTable[1].data);
 				fflush(fp);
 				continue;
@@ -109,6 +115,8 @@ int main (int argc, char *argv[]){
 				strcpy(bufferTable[2].data, str);
 				bufferTable[2].isFull = true;
 				printf("Wrote to buffer 2\n");
+				fprintf(fpMasterLog, "PID: %d\tIndex: %d\t'%s'\t Write buffer 2\n", getpid(), 0, bufferTable[2].data);
+				fflush(fpMasterLog);
 				fprintf(fp, "%s\tWrite\t2\t%s\n", timeString, bufferTable[2].data);
 				fflush(fp);
 				continue;
@@ -118,6 +126,8 @@ int main (int argc, char *argv[]){
 				strcpy(bufferTable[3].data, str);
 				bufferTable[3].isFull = true;
 				printf("Wrote to buffer 3\n");
+				fprintf(fpMasterLog, "PID: %d\tIndex: %d\t'%s'\t Write buffer 3\n", getpid(), 0, bufferTable[3].data);
+				fflush(fpMasterLog);
 				fprintf(fp, "%s\tWrite\t3\t%s\n", timeString, bufferTable[3].data);
 				fflush(fp);
 				continue;
@@ -127,13 +137,20 @@ int main (int argc, char *argv[]){
 				strcpy(bufferTable[4].data, str);
 				bufferTable[4].isFull = true;
 				printf("Wrote to buffer 4\n");
+				fprintf(fpMasterLog, "PID: %d\tIndex: %d\t'%s'\t Write buffer 4\n", getpid(), 0, bufferTable[4].data);
+				fflush(fpMasterLog);
 				fprintf(fp, "%s\tWrite\t4\t%s\n", timeString, bufferTable[4].data);
 				fflush(fp);
 				continue;
 			} else {
+				
+				fprintf(fpMasterLog, "%d\t%d\tBuffers full on write attempt\n", getpid(), 0);
+				fflush(fpMasterLog);
 				break;
 			}
 		}
+
+		fclose(fpMasterLog);
 		//Exit section
 		
 		j = (*turn + 1) % n;
