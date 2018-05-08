@@ -61,6 +61,9 @@ typedef struct
 
 //prototypes
 void handle(int signo);
+void terminateSharedResources();
+static int setperiodic(double sec);
+void calculateTime();
 
 //Queue Prototypes
 Queue* createQueue(unsigned capacity);
