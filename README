@@ -1,3 +1,83 @@
+RESUBMIT 
+
+
+TODO:
+[X]Let there be five buffers and our producer process keeps on trying to fill those five buffers. Then, this process sets a flag to indicate that one of the five buffers is full. The process can write into a buffer only if the buffer is empty.
+
+[ ]There are a number of other processes (consumers) who keep on looking for a buffer to become full. One of these processes should be able to pick up the text in the buffer and write it into the log file. The process must make sure that the file is not opened by another process for writing.
+
+[X]The main program will fork a producer and n consumers, with n supplied as a command line parameter
+
+[X] Let the default for n be 10. 
+[X] Allocate/deallocate shared memory in the master process.
+[X]The producer process will, at random times, wake up and see if a buffer is free.
+	Did this by added a random sleep at in remainder section similiar to consumer sleep.  producer sleep can be longer however
+[X] buffers (and associated flags) allocated in shared memory. 
+[X]The buffers are writeable by producer and readable by consumers. 
+[X]The buffer flags (empty/full) must be readable as well as writeable by both producer and consumers. 
+[X]Only one consumr should be able to read a buffer at any time though five consumers can read five buffers simultaneously. 
+[X]Template for the solution in Algorithm 4 of the lecture notes (critical section with multiple processes). 
+[X]Replace the remainder_section part of the template with a sleep for random time between 1 and 5 seconds (no zero delay).
+
+[X]Make sure you never have more than 20 processes in the system at any time, even if the program is invoked with n being more than 20
+	Hardcode to only allow 17 consumer processes + 1 producer.  If user attempts to enter more, getopt will not allow
+
+[ ]Add the pid of the child to the file as comment in the log file. The preferred output format for log file is:
+PID Index String where Index is the logical number for consumer process, assigned internally by your code, and varies between 0 and
+n−1. 
+[X]Child process will be execed by the command equivalent to the shell command consumer xx
+where xx is the index number of the child process. You can supply other parameters in exec as needed, for example
+shared memory addresses.
+
+[X] Separate log file for producer and each consumer. This log file will be called prod.log and consxx.log where xx is the consumer number.
+[ ] Producer will indicate the time (taken from system clock) at which it performed any activity, with the activity being defined as writing the buffer, waiting for a buffer to be available or checking the buffer availability, and going to sleep for r seconds.
+HH:MM:SS Started
+HH:MM:SS Write   N   Message
+HH:MM:SS Sleep   r
+HH:MM:SS Check
+HH:MM:SS Terminated  Reason
+
+[ ] Consumer log format
+HH:MM:SS Started
+HH:MM:SS Read    N   Message
+HH:MM:SS Sleep   r
+HH:MM:SS Check
+HH:MM:SS Attempt to write master log
+HH:MM:SS Wrote master log
+HH:MM:SS Terminated  Reason
+
+[ ]write a shell script to analyze your logs. Statistics:
+[ ] sleep time for each process
+[ ] number of text messages written
+[ ] number of attempts to enter critical section (for buffer as well as file). 
+[ ] Also give me an average of those statistics.
+
+[X] Create separate consumer processes from your main process. 
+[X]The main process also sets a timer at the start of computation to 100 seconds. 
+[X]If computation has not finished by this time, the main process kills all the spawned processes and then exits. Make sure that you print appropriate message(s).
+
+[ ]In addition, the main process should print a message when an interrupt signal (^C) is received. 
+[X]All the children should be killed as a result.
+[ ] The children/grandchildren kill themselves upon receiving interrupt signal but print a message on stderr to indicate that they are dying because of an interrupt, along with the identification information. 
+[ ]All other signals are ignored.
+[ ] Make sure that the processes handle multiple interrupts correctly. As a precaution, add this feature only after your programis well debugged.
+[X] The code for main and child processes should be compiled separately and the executables be called master, producer, and consumer.
+
+[X]You are required to use fork, exec (or one of its variants)
+[X] wait
+[X]  exit to manage multiple processes. 
+[X]Use shmctl suite of calls for shared memory allocation.
+[X]  Also make sure that you do not have more than twenty processes in the system at any time. You can do this by keeping a counter in master that gets incremented by fork and decremented by wait.
+	
+
+
+
+
+
+
+
+
+
 start program:  ex - master -n 5 < alice.txt.
 
 I found this assignment to be much more difficult then my current skills in C and Unix allowed.
