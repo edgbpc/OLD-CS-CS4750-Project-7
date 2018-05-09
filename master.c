@@ -13,6 +13,8 @@ Process *processes;
 int * turn;
 state * flag;
 
+void printUsage();
+
 int main (int argc, char *argv[]){
 
 	double terminateTime = 100; //used by setperiodic to terminate program
@@ -35,28 +37,26 @@ int main (int argc, char *argv[]){
 		return 1;
 	}
 
-//signal(SIGALRM, handle);
-//signal(SIGINT, childTrap);
 
-turnKey = 59566;
-bufferKey = 59567;
-flagKey = 59562;
-processesKey = 59564;
+	turnKey = 59566;
+	bufferKey = 59567;
+	flagKey = 59562;
+	processesKey = 59564;
 
-key_t keyEOFFlag = 59563; 
+	key_t keyEOFFlag = 59563; 
 
 
 //create shared memory locations
-shmidTurn = shmget(turnKey, SHM_SIZE, IPC_CREAT | 0666);
-shmidBuffer = shmget(bufferKey, 5*(sizeof(Buffer)), IPC_CREAT | 0666);
-shmidFlag = shmget(flagKey, 18*SHM_SIZE, IPC_CREAT | 0666);
-shmidProcesses = shmget(processesKey, 18*(sizeof(Process)), IPC_CREAT | 0666);
+	shmidTurn = shmget(turnKey, SHM_SIZE, IPC_CREAT | 0666);
+	shmidBuffer = shmget(bufferKey, 5*(sizeof(Buffer)), IPC_CREAT | 0666);
+	shmidFlag = shmget(flagKey, 18*SHM_SIZE, IPC_CREAT | 0666);
+	shmidProcesses = shmget(processesKey, 18*(sizeof(Process)), IPC_CREAT | 0666);
 
 //Attach to shared memory
-turn = (int *)shmat(shmidTurn, NULL, 0);
-bufferTable = (Buffer *)shmat(shmidBuffer, NULL, 0);
-flag = (state *)shmat(shmidFlag, NULL, 0);
-processes = (Process *)shmat(shmidProcesses, NULL, 0);
+	turn = (int *)shmat(shmidTurn, NULL, 0);
+	bufferTable = (Buffer *)shmat(shmidBuffer, NULL, 0);
+	flag = (state *)shmat(shmidFlag, NULL, 0);
+	processes = (Process *)shmat(shmidProcesses, NULL, 0);
 
 
 
@@ -67,25 +67,29 @@ processes = (Process *)shmat(shmidProcesses, NULL, 0);
 
 
 
-while ((option = getopt(argc, argv, "n:h")) != -1){
-	switch (option){
-		case 'n' : numConsumers = atoi(optarg);
-			   if (numConsumers > 17){
-			   	printf("Max processes is 20\n");
-				printf("Running with 1 Producer, 17 Consumers\n");
-				numConsumers = 17;
-				}
-			break;
+	while ((option = getopt(argc, argv, "n:h")) != -1){
+		switch (option){
+			case 'n' : numConsumers = atoi(optarg);
+				   if (numConsumers > 17){
+				   	printf("Max processes is 20\n");
+					printf("Running with 1 Producer, 17 Consumers\n");
+					numConsumers = 17;
+					}
+				break;
 
-		case 'h' : // print_usage();
-			return (0);
-			break;
+			case 'h' : 
+				printUsage();
+				terminateSharedResources();
+				return 0;
+				break;
 
-	default : 
-		printf("No number of consumers specified. Default is 10\n");
-		break;	
-	}
-}
+			default :
+				printf("Invalid option selected\n");
+				terminateSharedResources();
+				return 0;
+				break;	
+		}
+	}	
 
 	printf("No processes forked yet\n");
 
@@ -122,11 +126,6 @@ while ((option = getopt(argc, argv, "n:h")) != -1){
 		 } 
 	} 
 
-//printf("Waiting on the kids\n");
-
-//printf("End of master\n");
-//
-
 while ((wpid = wait(&status)) > 0);
 
 
@@ -155,9 +154,18 @@ void handle(int signo){
 		kill(0, SIGKILL);
 		wait(NULL);
 		exit(0);
+	} else {
 	}
 }
 
+void printUsage(){
+	printf("./master options < file\n");
+	printf("Options:\n");
+	printf("-n to specify number of consumers.  Max 17.  Default 10 if not selected\n");
+	printf("-h this help message\n");
+
+
+}
 
 void terminateSharedResources(){
 	shmdt(turn);

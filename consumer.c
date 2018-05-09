@@ -13,6 +13,14 @@ char timeString[9];
 
 int main (int argc, char *argv[]){
 
+//signal handler to catch ctrl c
+	if(signal(SIGINT, handle) == SIG_ERR){
+		perror("Signal Failed");
+	}
+	if(signal(SIGALRM, handle) == SIG_ERR){
+		perror("Signal Failed");
+	}	
+
 	int location = atoi(argv[1]);
 	int numProcesses = atoi(argv[2]);
 
@@ -53,6 +61,7 @@ int main (int argc, char *argv[]){
 
 	calculateTime();
 	fprintf(fp, "%s\tStarted\n", timeString);
+	fflush(fp);
 
 	int i = location;
 	int j;
@@ -78,12 +87,16 @@ int main (int argc, char *argv[]){
 		//critical section
 		
 		fpMasterLog = fopen("master.log", "a");
-		
+		calculateTime();
+		fprintf(fp, "%s\tCheck\n", timeString);
+		fflush(fp);	
+	
 		if (bufferTable[0].isFull == true){
 			calculateTime();
 			printf("Consumer %d is reading from buffer 0\n", location);
 			fprintf(fpMasterLog, "PID: %d\tIndex %d '%s'\t Read buffer 0\n", getpid(), location, bufferTable[0].data);
 			fflush(fpMasterLog);
+			fprintf(fp, "%s\tWrote master log\n", timeString);
 			fprintf(fp, "%s\tRead\t0\t%s\n", timeString, bufferTable[0].data);
 			fflush(fp);
 			bufferTable[0].isFull = false;
@@ -92,6 +105,7 @@ int main (int argc, char *argv[]){
 			printf("Consumer %d is reading from buffer 1\n", location);
 			fprintf(fpMasterLog, "PID: %d\tIndex: %d '%s'\t Read buffer 1\n", getpid(), location, bufferTable[1].data);
 			fflush(fpMasterLog);
+			fprintf(fp, "%s\tWrote master log\n", timeString);
 			fprintf(fp, "%s\tRead\t1\t%s\n", timeString, bufferTable[1].data);
 			fflush(fp);
 			bufferTable[1].isFull = false;
@@ -101,6 +115,7 @@ int main (int argc, char *argv[]){
 			calculateTime();
 			fprintf(fpMasterLog, "PID:%d\tIndex:%d '%s'\t Read buffer 2\n", getpid(), location, bufferTable[2].data);
 			fflush(fpMasterLog);
+			fprintf(fp, "%s\tWrote master log\n", timeString);
 			fprintf(fp, "%s\tRead\t2\t%s\n", timeString, bufferTable[2].data);
 			fflush(fp);
 			bufferTable[2].isFull = false;
@@ -110,6 +125,7 @@ int main (int argc, char *argv[]){
 			calculateTime();
 			fprintf(fpMasterLog, "PID: %d\tIndex:%d '%s'\t Read buffer 3\n", getpid(), location, bufferTable[3].data);
 			fflush(fpMasterLog);
+			fprintf(fp, "%s\tWrote master log\n", timeString);
 			fprintf(fp, "%s\tRead\t3\t%s\n", timeString, bufferTable[3].data);
 			fflush(fp);
 			bufferTable[3].isFull = false;
@@ -119,6 +135,7 @@ int main (int argc, char *argv[]){
 			printf("Consumer %d is reading from buffer 4\n", location);
 			fprintf(fpMasterLog, "PID: %d\tIndex: %d '%s'\t Read buffer 4\n", getpid(), location, bufferTable[4].data);
 			fflush(fpMasterLog);
+			fprintf(fp, "%s\tWrote master log\n", timeString);
 			fprintf(fp, "%s\tRead\t4\t%s\n", timeString, bufferTable[4].data);
 			fflush(fp);
 			bufferTable[4].isFull = false;
@@ -136,19 +153,32 @@ int main (int argc, char *argv[]){
 		*turn = j; flag[i] = idle;
 
 		//remainder_Section()
-		
+		calculateTime();
 		int randSleep = rand() % 5 + 1;
+		fprintf(fp, "%s\tSleep\t%d\n", timeString, randSleep);
+		fflush(fp);
 		printf("Process %d is sleeping for %d\n", getpid(), randSleep);
 		sleep(randSleep);
 
 		} while (1);	
-	}	
+}	
 	
 void calculateTime(){
 	time(&current_time);
 	time_info = localtime(&current_time);
 	strftime(timeString, sizeof(timeString), "%H:%M:%S", time_info);
 }
+
+void handle(int signo){
+	if (signo == SIGINT || signo == SIGALRM){
+		calculateTime();
+		fprintf(fp, "%s\tTerminated\t Killed\n", timeString);
+		fflush(fp);
+		printf("process %d received signal\n", getpid());
+		exit(1);
+	}
+}
+
 //BEGIN CRITICAL SECTION//
 /*	
 		   printf("before consumer reads\n");

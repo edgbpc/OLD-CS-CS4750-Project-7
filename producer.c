@@ -21,6 +21,13 @@ int main (int argc, char *argv[]){
 	printf("In producer\n");
 	fp = fopen("producer.log", "w");
 
+//signal handler to catch ctrl c
+	if(signal(SIGINT, handle) == SIG_ERR){
+		perror("Signal Failed");
+	}
+	if(signal(SIGALRM, handle) == SIG_ERR){
+		perror("Signal Failed");
+	}	
 
 	//shared memory keys
 	turnKey = 59566;
@@ -69,6 +76,9 @@ int main (int argc, char *argv[]){
 	int j;
 	int n = numProcesses;
 
+	calculateTime();
+	fprintf(fp, "%s\tStarted\n", timeString);
+	fflush(fp);
 	
 	//while (fgets(str, BUFFERSIZE, stdin) != NULL){
 	do {
@@ -87,6 +97,8 @@ int main (int argc, char *argv[]){
 		//
 		fpMasterLog = fopen("master.log", "a");
 		while (fgets(str, BUFFERSIZE, stdin) != NULL){
+			fprintf(fp, "%s\tCheck\n", timeString);
+			fflush(fp);
 
 			if (bufferTable[0].isFull == false){
 				calculateTime();	
@@ -160,8 +172,11 @@ int main (int argc, char *argv[]){
 		//assign turn to next waiting process; change own flag to idle
 		*turn = j; flag[i] = idle;
 
-		//remainder_Section()
+		//remainder_Section()i
 		int randSleep = rand() % 10 + 1;
+		calculateTime();
+		fprintf(fp, "%s\tSleep\t%d\n", timeString, randSleep);
+		fflush(fp);
 		printf("Process %d is sleeping for %d\n", getpid(), randSleep);
 		sleep(randSleep);
 	} while(1);
@@ -177,4 +192,13 @@ void calculateTime(){
 	time(&current_time);
 	time_info = localtime(&current_time);
 	strftime(timeString, sizeof(timeString), "%H:%M:%S", time_info);
+}
+void handle(int signo){
+	if (signo == SIGINT || signo == SIGALRM){
+		calculateTime();
+		fprintf(fp, "%s\tTerminated\t Killed\n", timeString);
+		fflush(fp);
+		printf("process %d received signal\n", getpid());
+		exit(1);
+	}
 }
