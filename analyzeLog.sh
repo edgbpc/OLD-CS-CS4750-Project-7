@@ -11,5 +11,5 @@ echo "$totalSleep sleep time in $1"
 numWrites=$(grep "Write" $1 | wc -l)
 echo "$numWrites writes in $1"
 
-numReads=$(grep "Reads" $1 | wc -l)
+numReads=$(grep "Read" $1 | wc -l)
 echo "$numReads reads in $1"
