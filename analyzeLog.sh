@@ -13,3 +13,6 @@ echo "$numWrites writes in $1"
 
 numReads=$(grep "Read" $1 | wc -l)
 echo "$numReads reads in $1"
+
+averageSleep=$((totalSleep/checks))
+echo "average sleep per cycle is $averageSleep in $1"
