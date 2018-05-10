@@ -46,11 +46,11 @@ HH:MM:SS Attempt to write master log
 HH:MM:SS Wrote master log
 HH:MM:SS Terminated  Reason
 
-[ ]write a shell script to analyze your logs. Statistics:
+[X ]write a shell script to analyze your logs. Statistics:
 [X] sleep time for each process
 [X] number of text messages written
-[ ] number of attempts to enter critical section (for buffer as well as file). 
-[ ] Also give me an average of those statistics.
+[X] number of attempts to enter critical section (for buffer as well as file). 
+[X] Also give me an average of those statistics.
 
 [X] Create separate consumer processes from your main process. 
 [X]The main process also sets a timer at the start of computation to 100 seconds. 

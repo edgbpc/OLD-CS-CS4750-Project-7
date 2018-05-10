@@ -64,7 +64,12 @@ int main (int argc, char *argv[]){
 
 //*EOFflag = 1;
 
-
+	if(isatty(0)){
+		printf("No file input. Aborting.\n");
+		printf("Call program with file redirection\n");
+		terminateSharedResources();
+		exit(1);
+	}
 
 
 	while ((option = getopt(argc, argv, "n:h")) != -1){
@@ -92,6 +97,8 @@ int main (int argc, char *argv[]){
 	}	
 
 	printf("No processes forked yet\n");
+
+
 
 
 	//create producer child
@@ -128,6 +135,7 @@ int main (int argc, char *argv[]){
 
 while ((wpid = wait(&status)) > 0);
 
+terminateSharedResources();
 
 return 1;
 }

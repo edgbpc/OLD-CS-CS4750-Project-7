@@ -62,16 +62,6 @@ int main (int argc, char *argv[]){
 
 
 
-
-	//fprintf(fp, "%s\tStarting\n", timeString = printTimeString());
-	printf("Start of Produer\n");
-
-	printf("Process %d is a producer = %d\n and consumer is %d\n", getpid(), processes[0].producer, processes[0].consumer);
-	//printf("argv[1] is %s\n", argv[1]);
-
-
-	//signal(SIGINT, handle);
-
 	int i = 0;
 	int j;
 	int n = numProcesses;
@@ -83,6 +73,10 @@ int main (int argc, char *argv[]){
 	//while (fgets(str, BUFFERSIZE, stdin) != NULL){
 	do {
 		do{
+			calculateTime();
+			printf("Process %d wants into the critical section\n", getpid());
+			fprintf(fp, "%s\t%d\tAttempt to Enter Critical Section\n", timeString, 0);
+			fflush(fp);
 			flag[i] = want_in;
 			j = *turn;
 			while (j != i)
@@ -96,9 +90,11 @@ int main (int argc, char *argv[]){
 		//critical section
 		//
 		fpMasterLog = fopen("master.log", "a");
+		fprintf(fp, "%s\tCheck\n", timeString);
+		fflush(fp);
+		printf("Process %d got into critical section\n", getpid());
+		
 		while (fgets(str, BUFFERSIZE, stdin) != NULL){
-			fprintf(fp, "%s\tCheck\n", timeString);
-			fflush(fp);
 
 			if (bufferTable[0].isFull == false){
 				calculateTime();	
@@ -109,7 +105,7 @@ int main (int argc, char *argv[]){
 				fflush(fpMasterLog);
 				fprintf(fp, "%s\tWrite\t0\t%s\n", timeString, bufferTable[0].data);
 				fflush(fp);
-				continue;
+				//continue;
 			} else if (bufferTable[1].isFull == false) {
 				calculateTime();	
 	
@@ -120,7 +116,7 @@ int main (int argc, char *argv[]){
 				fflush(fpMasterLog);
 				fprintf(fp, "%s\tWrite\t1\t%s\n", timeString, bufferTable[1].data);
 				fflush(fp);
-				continue;
+				//continue;
 			} else if (bufferTable[2].isFull == false) {
 				calculateTime();	
 
@@ -131,7 +127,7 @@ int main (int argc, char *argv[]){
 				fflush(fpMasterLog);
 				fprintf(fp, "%s\tWrite\t2\t%s\n", timeString, bufferTable[2].data);
 				fflush(fp);
-				continue;
+				//continue;
 			} else if (bufferTable[3].isFull == false) {
 				calculateTime();	
 
@@ -142,7 +138,7 @@ int main (int argc, char *argv[]){
 				fflush(fpMasterLog);
 				fprintf(fp, "%s\tWrite\t3\t%s\n", timeString, bufferTable[3].data);
 				fflush(fp);
-				continue;
+				//continue;
 			} else if (bufferTable[4].isFull == false) {
 				calculateTime();	
 
@@ -153,7 +149,7 @@ int main (int argc, char *argv[]){
 				fflush(fpMasterLog);
 				fprintf(fp, "%s\tWrite\t4\t%s\n", timeString, bufferTable[4].data);
 				fflush(fp);
-				continue;
+				//continue;
 			} else {
 				
 				fprintf(fpMasterLog, "%d\t%d\tBuffers full on write attempt\n", getpid(), 0);
@@ -162,7 +158,9 @@ int main (int argc, char *argv[]){
 			}
 		}
 
+
 		fclose(fpMasterLog);
+		printf("Process %d is exiting the critical section\n", getpid());
 		//Exit section
 		
 		j = (*turn + 1) % n;
@@ -173,11 +171,21 @@ int main (int argc, char *argv[]){
 		*turn = j; flag[i] = idle;
 
 		//remainder_Section()i
-		int randSleep = rand() % 10 + 1;
+		
+		if (bufferTable[0].isFull == false && bufferTable[1].isFull == false && bufferTable[2].isFull == false && bufferTable[3].isFull == false && bufferTable[4].isFull == false){
+			printf("All buffers empty");
+			calculateTime();
+			processes[0].completed = true;
+			fprintf(fp, "Producer process as reached end of file\n");
+			fprintf(fp,"%s\tTerminated\tNormal\n", timeString);
+			fflush(fp);
+			exit(1);
+		}
+
+		int randSleep = rand() % 5 + 1;
 		calculateTime();
 		fprintf(fp, "%s\tSleep\t%d\n", timeString, randSleep);
 		fflush(fp);
-		printf("Process %d is sleeping for %d\n", getpid(), randSleep);
 		sleep(randSleep);
 	} while(1);
 

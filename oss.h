@@ -48,6 +48,7 @@ typedef struct {
 	bool consumer;
 	int pid;
 	int index;
+	bool completed;
 } Process;
 
 typedef struct

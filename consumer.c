@@ -51,13 +51,8 @@ int main (int argc, char *argv[]){
 	sprintf(fileName, "%s%s.log", consumer, argv[1]);
 	fp = fopen(fileName, "w");
 
-	printf("Process %d consumer flag is %d, producer flag is %d\n", processes[location].pid, processes[location].consumer, processes[location].producer );
-
-
 	time_t timeSeed;
 	srand((int)time(&timeSeed) % getpid()); //%getpid used because children were all getting the same "random" time to run. 
-
-
 
 	calculateTime();
 	fprintf(fp, "%s\tStarted\n", timeString);
@@ -71,6 +66,10 @@ int main (int argc, char *argv[]){
 
 	do { 
 		do{
+			calculateTime();
+			printf("Process %d is wants in to the critical section\n", getpid());
+			fprintf(fp, "%s\t%d\tAttempt to enter critical section\n", timeString, location);
+			fflush(fp);
 			flag[i] = want_in;
 			j = *turn;
 			while (j != i)
@@ -82,11 +81,12 @@ int main (int argc, char *argv[]){
 				if ((j != i) && (flag[j] == in_cs))
 					break;
 		} while ((j < n ) || ( *turn != i && flag[*turn] != idle));
-		
 		*turn = i;
 		//critical section
-		
+		printf("Process %d got into critical section\n", getpid());
 		fpMasterLog = fopen("master.log", "a");
+		fprintf(fpMasterLog, "PID: %d\tIndex %d \t Attempting to Write to Master Log\n", getpid(), location);
+		fflush(fpMasterLog);
 		calculateTime();
 		fprintf(fp, "%s\tCheck\n", timeString);
 		fflush(fp);	
@@ -144,6 +144,7 @@ int main (int argc, char *argv[]){
 
 
 		//Exit section
+		printf("Process %d is exiting the critical section\n", getpid());
 		fclose(fpMasterLog);
 		j = (*turn + 1) % n;
 		while (flag[j] == idle)
@@ -152,12 +153,19 @@ int main (int argc, char *argv[]){
 		//assign turn to next waiting process; change own flag to idle
 		*turn = j; flag[i] = idle;
 
+
 		//remainder_Section()
+		
+		if (processes[0].completed == true){
+			calculateTime();
+			fprintf(fp,"%s\tTerminated\tNormal\n", timeString);
+			fflush(fp);
+			exit(1);
+		}
 		calculateTime();
 		int randSleep = rand() % 5 + 1;
 		fprintf(fp, "%s\tSleep\t%d\n", timeString, randSleep);
 		fflush(fp);
-		printf("Process %d is sleeping for %d\n", getpid(), randSleep);
 		sleep(randSleep);
 
 		} while (1);	
